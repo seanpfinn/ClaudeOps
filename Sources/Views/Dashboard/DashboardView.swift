@@ -11,7 +11,7 @@ struct DashboardView: View {
             SidebarView(selection: $selection)
                 .environmentObject(usageService)
                 .environmentObject(settings)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
         } detail: {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
