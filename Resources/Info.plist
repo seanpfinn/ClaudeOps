@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>ClaudeWatch</string>
+	<string>ClaudeOps</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,10 +22,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.claudewatch.app</string>
+			<string>com.claudeops.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>claudewatch</string>
+				<string>claudeops</string>
 			</array>
 		</dict>
 	</array>
@@ -36,8 +36,8 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 ClaudeWatch</string>
+	<string>© 2026 ClaudeOps</string>
 	<key>NSUserNotificationsUsageDescription</key>
-	<string>ClaudeWatch sends alerts when your Claude usage approaches its limits.</string>
+	<string>ClaudeOps sends alerts when your Claude usage approaches its limits.</string>
 </dict>
 </plist>

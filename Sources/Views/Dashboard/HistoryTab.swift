@@ -29,7 +29,7 @@ struct HistoryTab: View {
                     .foregroundStyle(.tertiary)
                 Text("No History Yet")
                     .font(.title3.bold())
-                Text("Usage history will appear here once ClaudeWatch starts collecting data.")
+                Text("Usage history will appear here once ClaudeOps starts collecting data.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

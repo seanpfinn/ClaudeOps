@@ -29,9 +29,9 @@ enum KeychainService {
         return creds.claudeAiOauth.accessToken
     }
 
-    // MARK: - ClaudeWatch API key storage
+    // MARK: - ClaudeOps API key storage
 
-    private static let service = "ClaudeWatch"
+    private static let service = "ClaudeOps"
     private static let account = "api-key"
 
     static func saveApiKey(_ key: String) throws {

@@ -66,7 +66,7 @@ struct SettingsView: View {
         .sheet(isPresented: $showApiKeySetup) {
             ApiKeySetupView().environmentObject(settings)
         }
-        .confirmationDialog("Reset ClaudeWatch?", isPresented: $showResetConfirm, titleVisibility: .visible) {
+        .confirmationDialog("Reset ClaudeOps?", isPresented: $showResetConfirm, titleVisibility: .visible) {
             Button("Reset & Sign Out", role: .destructive) {
                 settings.reset()
             }

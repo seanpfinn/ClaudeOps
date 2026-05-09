@@ -34,6 +34,17 @@ struct OAuthUsageResponse: Decodable {
     }
 }
 
+// MARK: - Widget cache payload (shared file format)
+
+struct WidgetCachePayload: Codable {
+    var fiveHour: Int = 0
+    var sevenDay: Int = 0
+    var fiveHourResetsAtInterval: Double?
+    var sevenDayResetsAtInterval: Double?
+    var lastUpdatedInterval: Double = 0
+    var authToken: String?
+}
+
 // MARK: - UsageService
 
 @MainActor
@@ -103,7 +114,6 @@ final class UsageService: ObservableObject {
     }
 
     private func resolvedFetch() async throws -> OAuthUsageResponse {
-        // Try Claude Code Keychain first
         if let token = cachedClaudeToken {
             return try await fetchWithBearerToken(token)
         }
@@ -150,9 +160,8 @@ final class UsageService: ObservableObject {
 
     static var widgetCacheURL: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return support.appendingPathComponent("ClaudeWatch/widget-cache.json")
+        return support.appendingPathComponent("ClaudeOps/widget-cache.json")
     }
-}
 
     private func fetchWithBearerToken(_ token: String) async throws -> OAuthUsageResponse {
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)

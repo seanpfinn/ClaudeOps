@@ -37,7 +37,7 @@ struct MenuBarView: View {
 
     private var headerRow: some View {
         HStack {
-            Text("ClaudeWatch")
+            Text("ClaudeOps")
                 .font(.headline)
             Spacer()
             if usageService.isLoading {

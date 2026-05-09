@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct ClaudeWatchApp: App {
+struct ClaudeOpsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var usageService = UsageService.shared
     @StateObject private var settings = SettingsManager.shared
@@ -9,7 +9,7 @@ struct ClaudeWatchApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        WindowGroup("ClaudeWatch", id: "dashboard") {
+        WindowGroup("ClaudeOps", id: "dashboard") {
             RootView()
                 .environmentObject(usageService)
                 .environmentObject(settings)

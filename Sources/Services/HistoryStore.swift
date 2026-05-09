@@ -7,7 +7,7 @@ final class HistoryStore: ObservableObject {
 
     private let fileURL: URL = {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = support.appendingPathComponent("ClaudeWatch", isDirectory: true)
+        let dir = support.appendingPathComponent("ClaudeOps", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("usage-history.json")
     }()

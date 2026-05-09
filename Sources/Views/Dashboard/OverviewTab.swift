@@ -51,6 +51,7 @@ struct OverviewTab: View {
             ScrollView {
                 VStack(spacing: 16) {
                     toolbarHeader
+                    statusFooter(now: timeline.date)
                     statusBanner(now: timeline.date)
                     vizSection(now: timeline.date)
                     if showActivity {
@@ -65,7 +66,6 @@ struct OverviewTab: View {
                     if showTrend {
                         trendRow
                     }
-                    statusFooter(now: timeline.date)
                 }
                 .padding(20)
             }
