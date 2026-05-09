@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import WidgetKit
 
 // MARK: - API Response Models
 
@@ -89,6 +90,7 @@ final class UsageService: ObservableObject {
             error = nil
             consecutiveFailures = 0
             HistoryStore.shared.append(snapshot)
+            writeWidgetCache(snapshot)
         } catch let err as AppError {
             error = err
             consecutiveFailures += 1
@@ -108,12 +110,28 @@ final class UsageService: ObservableObject {
         do {
             let token = try KeychainService.readClaudeCodeToken()
             cachedClaudeToken = token
+            storeWidgetToken(token)
             return try await fetchWithBearerToken(token)
         } catch AppError.keychainNotFound {
             // Fall back to stored API key
         }
         let apiKey = try KeychainService.loadApiKey()
+        storeWidgetToken(apiKey)
         return try await fetchWithBearerToken(apiKey)
+    }
+
+    private func storeWidgetToken(_ token: String) {
+        UserDefaults(suiteName: "group.com.claudewatch.app")?.set(token, forKey: "authToken")
+    }
+
+    private func writeWidgetCache(_ snapshot: UsageSnapshot) {
+        guard let d = UserDefaults(suiteName: "group.com.claudewatch.app") else { return }
+        d.set(snapshot.fiveHourUtilization, forKey: "fiveHour")
+        d.set(snapshot.sevenDayUtilization, forKey: "sevenDay")
+        d.set(snapshot.lastUpdated, forKey: "lastUpdated")
+        if let v = snapshot.fiveHourResetsAt { d.set(v, forKey: "fiveHourResetsAt") }
+        if let v = snapshot.sevenDayResetsAt { d.set(v, forKey: "sevenDayResetsAt") }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func fetchWithBearerToken(_ token: String) async throws -> OAuthUsageResponse {
