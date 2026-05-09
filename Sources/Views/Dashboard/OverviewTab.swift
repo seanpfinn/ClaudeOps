@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 enum VizStyle: String, CaseIterable {
     case gauge, bars, compact
@@ -19,6 +20,19 @@ enum VizStyle: String, CaseIterable {
     }
 }
 
+enum ActivityRange: String, CaseIterable {
+    case day = "Day", week = "Week", month = "Month", year = "Year"
+
+    var lookback: TimeInterval {
+        switch self {
+        case .day:   return 24 * 3600
+        case .week:  return 7 * 24 * 3600
+        case .month: return 30 * 24 * 3600
+        case .year:  return 365 * 24 * 3600
+        }
+    }
+}
+
 struct OverviewTab: View {
     @EnvironmentObject var usageService: UsageService
     @EnvironmentObject var settings: SettingsManager
@@ -28,6 +42,8 @@ struct OverviewTab: View {
     @AppStorage("showProjectionCard") private var showProjection = true
     @AppStorage("showHeatmap") private var showHeatmap = true
     @AppStorage("showTrend") private var showTrend = true
+    @AppStorage("showActivity") private var showActivity = true
+    @AppStorage("activityRange") private var activityRange = ActivityRange.week
     @State private var showCustomize = false
 
     var body: some View {
@@ -37,6 +53,9 @@ struct OverviewTab: View {
                     toolbarHeader
                     statusBanner(now: timeline.date)
                     vizSection(now: timeline.date)
+                    if showActivity {
+                        activityChartCard
+                    }
                     if showProjection {
                         projectionCard(now: timeline.date)
                     }
@@ -57,6 +76,8 @@ struct OverviewTab: View {
 
     private var toolbarHeader: some View {
         HStack(spacing: 8) {
+            Text("Overview")
+                .font(.title2.bold())
             Spacer()
             HStack(spacing: 2) {
                 ForEach(VizStyle.allCases, id: \.self) { style in
@@ -99,6 +120,7 @@ struct OverviewTab: View {
             Text("Modules")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
+            Toggle("Activity Chart", isOn: $showActivity)
             Toggle("Projections", isOn: $showProjection)
             Toggle("Weekly Heatmap", isOn: $showHeatmap)
             Toggle("Trend vs Yesterday", isOn: $showTrend)
@@ -251,6 +273,142 @@ struct OverviewTab: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity)
         .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Activity chart
+
+    private var activityChartCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.xyaxis.line")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text("Activity")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Picker("", selection: $activityRange) {
+                    ForEach(ActivityRange.allCases, id: \.self) { r in
+                        Text(r.rawValue).tag(r)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+            }
+
+            let points = activityDataPoints
+            if points.isEmpty {
+                Text("No activity recorded for this period.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
+            } else {
+                Chart {
+                    ForEach(points) { point in
+                        PointMark(
+                            x: .value("Date", point.date),
+                            y: .value("Hour", point.hour)
+                        )
+                        .foregroundStyle(activityPointColor(for: point.utilization))
+                        .symbolSize(36)
+                        .opacity(0.75)
+                    }
+                    ForEach(activityDailyAverages(from: points)) { avg in
+                        LineMark(
+                            x: .value("Date", avg.date),
+                            y: .value("Hour", avg.avgHour)
+                        )
+                        .foregroundStyle(.white.opacity(0.35))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                        .interpolationMethod(.catmullRom)
+                    }
+                }
+                .chartYScale(domain: 0...24)
+                .chartYAxis {
+                    AxisMarks(values: [0, 6, 12, 18, 24]) { value in
+                        AxisGridLine().foregroundStyle(.white.opacity(0.08))
+                        AxisValueLabel {
+                            if let h = value.as(Int.self) {
+                                Text(activityHourLabel(h)).font(.caption2)
+                            }
+                        }
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks { _ in
+                        AxisGridLine().foregroundStyle(.white.opacity(0.08))
+                        AxisValueLabel(format: activityXAxisFormat).font(.caption2)
+                    }
+                }
+                .frame(height: 160)
+
+                HStack(spacing: 12) {
+                    activityLegendItem(color: .blue, label: "Normal")
+                    activityLegendItem(color: .orange, label: "Warning")
+                    activityLegendItem(color: .red, label: "Critical")
+                    Spacer()
+                    Text("— avg time of day")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func activityLegendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 3) {
+            Circle().fill(color.opacity(0.75)).frame(width: 7, height: 7)
+            Text(label).font(.caption2).foregroundStyle(.tertiary)
+        }
+    }
+
+    private var activityDataPoints: [ActivityPoint] {
+        let cutoff = Date().addingTimeInterval(-activityRange.lookback)
+        return history.entries
+            .filter { $0.timestamp >= cutoff }
+            .map { entry in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: entry.timestamp)
+                let hour = Double(comps.hour ?? 0) + Double(comps.minute ?? 0) / 60.0
+                return ActivityPoint(
+                    date: entry.timestamp,
+                    hour: hour,
+                    utilization: max(entry.fiveHourUtilization, entry.sevenDayUtilization)
+                )
+            }
+    }
+
+    private func activityDailyAverages(from points: [ActivityPoint]) -> [DailyAvgPoint] {
+        let cal = Calendar.current
+        let grouped = Dictionary(grouping: points) { cal.startOfDay(for: $0.date) }
+        return grouped.map { day, pts in
+            DailyAvgPoint(date: day, avgHour: pts.map(\.hour).reduce(0, +) / Double(pts.count))
+        }.sorted { $0.date < $1.date }
+    }
+
+    private func activityPointColor(for utilization: Int) -> Color {
+        if utilization >= Int(settings.criticalThreshold) { return .red }
+        if utilization >= Int(settings.warningThreshold) { return .orange }
+        return .blue
+    }
+
+    private func activityHourLabel(_ hour: Int) -> String {
+        switch hour {
+        case 0, 24: return "12 AM"
+        case 12:    return "12 PM"
+        case ..<12: return "\(hour) AM"
+        default:    return "\(hour - 12) PM"
+        }
+    }
+
+    private var activityXAxisFormat: Date.FormatStyle {
+        switch activityRange {
+        case .day:   return .dateTime.hour()
+        case .week:  return .dateTime.weekday(.abbreviated)
+        case .month: return .dateTime.month(.abbreviated).day()
+        case .year:  return .dateTime.month(.abbreviated)
+        }
     }
 
     // MARK: - Projection card
@@ -477,6 +635,19 @@ struct OverviewTab: View {
     }
 
     // MARK: - Models
+
+    private struct ActivityPoint: Identifiable {
+        let id = UUID()
+        let date: Date
+        let hour: Double
+        let utilization: Int
+    }
+
+    private struct DailyAvgPoint: Identifiable {
+        let id = UUID()
+        let date: Date
+        let avgHour: Double
+    }
 
     private struct ProjectionInfo {
         let label: String
