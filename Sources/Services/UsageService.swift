@@ -121,18 +121,38 @@ final class UsageService: ObservableObject {
     }
 
     private func storeWidgetToken(_ token: String) {
-        UserDefaults(suiteName: "group.com.claudewatch.app")?.set(token, forKey: "authToken")
+        var cache = readWidgetCache() ?? WidgetCachePayload()
+        cache.authToken = token
+        writeWidgetCacheFile(cache)
     }
 
     private func writeWidgetCache(_ snapshot: UsageSnapshot) {
-        guard let d = UserDefaults(suiteName: "group.com.claudewatch.app") else { return }
-        d.set(snapshot.fiveHourUtilization, forKey: "fiveHour")
-        d.set(snapshot.sevenDayUtilization, forKey: "sevenDay")
-        d.set(snapshot.lastUpdated, forKey: "lastUpdated")
-        if let v = snapshot.fiveHourResetsAt { d.set(v, forKey: "fiveHourResetsAt") }
-        if let v = snapshot.sevenDayResetsAt { d.set(v, forKey: "sevenDayResetsAt") }
+        var cache = readWidgetCache() ?? WidgetCachePayload()
+        cache.fiveHour = snapshot.fiveHourUtilization
+        cache.sevenDay = snapshot.sevenDayUtilization
+        cache.lastUpdatedInterval = snapshot.lastUpdated.timeIntervalSince1970
+        cache.fiveHourResetsAtInterval = snapshot.fiveHourResetsAt?.timeIntervalSince1970
+        cache.sevenDayResetsAtInterval = snapshot.sevenDayResetsAt?.timeIntervalSince1970
+        if let token = cachedClaudeToken { cache.authToken = token }
+        writeWidgetCacheFile(cache)
         WidgetCenter.shared.reloadAllTimelines()
     }
+
+    private func readWidgetCache() -> WidgetCachePayload? {
+        guard let data = try? Data(contentsOf: Self.widgetCacheURL) else { return nil }
+        return try? JSONDecoder().decode(WidgetCachePayload.self, from: data)
+    }
+
+    private func writeWidgetCacheFile(_ cache: WidgetCachePayload) {
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        try? data.write(to: Self.widgetCacheURL, options: .atomic)
+    }
+
+    static var widgetCacheURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return support.appendingPathComponent("ClaudeWatch/widget-cache.json")
+    }
+}
 
     private func fetchWithBearerToken(_ token: String) async throws -> OAuthUsageResponse {
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
