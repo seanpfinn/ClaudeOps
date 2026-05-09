@@ -30,12 +30,20 @@ struct SidebarView: View {
     @EnvironmentObject var usageService: UsageService
     @EnvironmentObject var settings: SettingsManager
 
+    // Resolved once; stable for the lifetime of the app
+    private let firstName: String = {
+        NSFullUserName().components(separatedBy: " ").first ?? NSUserName()
+    }()
+
     var body: some View {
         VStack(spacing: 0) {
-            appHeader
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
+            // Greeting updates every minute to catch time-of-day transitions
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                appHeader(now: timeline.date)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 16)
+            }
 
             usageSummary
                 .padding(.horizontal, 12)
@@ -52,20 +60,36 @@ struct SidebarView: View {
         .frame(maxHeight: .infinity)
     }
 
-    // MARK: - App header
+    // MARK: - Greeting header
 
-    private var appHeader: some View {
-        HStack(spacing: 10) {
+    private func appHeader(now: Date) -> some View {
+        HStack(alignment: .center, spacing: 10) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .frame(width: 28, height: 28)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
-            Text("ClaudeWatch")
-                .font(.title3.bold())
+            VStack(alignment: .leading, spacing: 1) {
+                Text(salutation(for: now))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(firstName)
+                    .font(.title3.bold())
+                    .lineLimit(1)
+            }
             Spacer()
             if usageService.isLoading {
                 ProgressView().scaleEffect(0.55).frame(width: 12, height: 12)
             }
+        }
+    }
+
+    private func salutation(for date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        switch hour {
+        case 5..<12:  return "Good morning,"
+        case 12..<17: return "Good afternoon,"
+        case 17..<21: return "Good evening,"
+        default:      return "Good night,"
         }
     }
 
